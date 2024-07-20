@@ -4,64 +4,100 @@ import {IIntervencao, ICreateIntervencaoData, IUpdateIntervencaoData} from '../i
 const prisma = new PrismaClient();
 
 export const createIntervencao = async (data: ICreateIntervencaoData, fonoaudiologoId: number): Promise<IIntervencao> => {
+    // Verifica se a criança está sob a responsabilidade do fonoaudiólogo logado
+    const crianca = await prisma.crianca.findFirst({
+        where: {
+            id: data.criancaId,
+            fonoaudiologo_responsavelId: fonoaudiologoId,
+        },
+    });
+    if (!crianca) {
+        throw new Error('A criança não está sob a responsabilidade do fonoaudiólogo logado.');
+    }
+
     return await prisma.intervencao.create({
         data: {
             ...data,
             data_intervencao: new Date(data.data_intervencao), // Converte a string ISO 8601 para um objeto Date
             fonoaudiologoId: fonoaudiologoId, // Usa o ID do fonoaudiólogo logado
-            data_criacao: new Date() // Define a data de criação como a data e hora atual
-        }
+            data_criacao: new Date(), // Define a data de criação como a data e hora atual
+        },
     });
 };
 
 export const getIntervencaoById = async (id: number, fonoaudiologoId: number): Promise<IIntervencao | null> => {
-    return await prisma.intervencao.findFirst({
+    // Verifica se a intervenção está associada a uma criança sob a responsabilidade do fonoaudiólogo logado
+    const intervencao = await prisma.intervencao.findFirst({
         where: {
             id: id,
-            fonoaudiologoId: fonoaudiologoId // Verifica se a intervenção pertence ao fonoaudiólogo logado
-        }
+            Crianca: {
+                fonoaudiologo_responsavelId: fonoaudiologoId,
+            },
+        },
+        include: {
+            Crianca: true,
+        },
     });
+    return intervencao;
 };
 
 export const getAllIntervencoes = async (fonoaudiologoId: number): Promise<IIntervencao[]> => {
     return await prisma.intervencao.findMany({
         where: {
-            fonoaudiologoId: fonoaudiologoId // Obtém todas as intervenções do fonoaudiólogo logado
-        }
+            Crianca: {
+                fonoaudiologo_responsavelId: fonoaudiologoId,
+            },
+        },
+        include: {
+            Crianca: true,
+        },
     });
 };
 
 export const updateIntervencao = async (id: number, data: IUpdateIntervencaoData, fonoaudiologoId: number): Promise<IIntervencao | null> => {
-    const updatedIntervencao = await prisma.intervencao.updateMany({
+    // Verifica se a intervenção está associada a uma criança sob a responsabilidade do fonoaudiólogo logado
+    const intervencao = await prisma.intervencao.findFirst({
         where: {
             id: id,
-            fonoaudiologoId: fonoaudiologoId // Verifica se a intervenção pertence ao fonoaudiólogo logado
+            Crianca: {
+                fonoaudiologo_responsavelId: fonoaudiologoId,
+            },
         },
-        data: {
-            ...data,
-            data_intervencao: data.data_intervencao ? new Date(data.data_intervencao) : undefined // Converte a string ISO 8601 para um objeto Date
-        }
+        include: {
+            Crianca: true,
+        },
     });
-
-    if (updatedIntervencao.count > 0) {
-        return getIntervencaoById(id, fonoaudiologoId);
+    if (!intervencao) {
+        throw new Error('A intervenção não pertence ao fonoaudiólogo logado.');
     }
 
-    return null;
+    return await prisma.intervencao.update({
+        where: {id},
+        data: {
+            ...data,
+            data_intervencao: data.data_intervencao ? new Date(data.data_intervencao) : undefined,
+        },
+    });
 };
 
 export const deleteIntervencao = async (id: number, fonoaudiologoId: number): Promise<IIntervencao | null> => {
-    const intervencaoToDelete = await getIntervencaoById(id, fonoaudiologoId);
-    if (!intervencaoToDelete) {
-        return null;
-    }
-
-    await prisma.intervencao.deleteMany({
+    // Verifica se a intervenção está associada a uma criança sob a responsabilidade do fonoaudiólogo logado
+    const intervencao = await prisma.intervencao.findFirst({
         where: {
             id: id,
-            fonoaudiologoId: fonoaudiologoId // Verifica se a intervenção pertence ao fonoaudiólogo logado
-        }
+            Crianca: {
+                fonoaudiologo_responsavelId: fonoaudiologoId,
+            },
+        },
+        include: {
+            Crianca: true,
+        },
     });
+    if (!intervencao) {
+        throw new Error('A intervenção não pertence ao fonoaudiólogo logado.');
+    }
 
-    return intervencaoToDelete;
+    return await prisma.intervencao.delete({
+        where: {id},
+    });
 };
