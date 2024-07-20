@@ -1,14 +1,14 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { register, login, verifyToken } from '../services/authService';
+import { ICreateFonoaudiologoData } from '../interfaces';
 
 export const registerHandler = async (req: Request, res: Response) => {
-    const { nome, email, senha } = req.body;
+    const { nome, email, senha }: ICreateFonoaudiologoData = req.body;
     try {
-        const user = await register(nome, email, senha);
+        const user = await register({ nome, email, senha });
         res.status(201).json(user);
     } catch (error) {
-        // @ts-ignore
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as Error).message });
     }
 };
 
@@ -18,12 +18,11 @@ export const loginHandler = async (req: Request, res: Response) => {
         const { user, token } = await login(email, senha);
         res.json({ user, token });
     } catch (error) {
-        // @ts-ignore
-        res.status(401).json({ error: error.message });
+        res.status(401).json({ error: (error as Error).message });
     }
 };
 
-export const verifyTokenHandler = (req: Request, res: Response, next: NextFunction) => {
+export const verifyTokenHandler = (req: Request, res: Response, next: Function) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
         return res.status(401).json({ error: 'Token not provided' });
@@ -31,10 +30,9 @@ export const verifyTokenHandler = (req: Request, res: Response, next: NextFuncti
     try {
         const decoded = verifyToken(token);
         // @ts-ignore
-        req.user = decoded; // Adiciona as informações do usuário logado ao objeto req
+        req.user = decoded;
         next();
     } catch (error) {
-        // @ts-ignore
-        res.status(401).json({ error: error.message });
+        res.status(401).json({ error: (error as Error).message });
     }
 };
