@@ -1,0 +1,62 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Fonoaudiologo {
+  id           Int      @id @default(autoincrement())
+  nome         String   @db.VarChar(100)
+  email        String   @unique @db.VarChar(100)
+  senha        String   @db.VarChar(100)
+  data_criacao DateTime @default(now())
+
+  Criancas     Crianca[]
+  Avaliacoes   Avaliacao[]
+  Intervencoes Intervencao[]
+}
+
+model Crianca {
+  id                          Int      @id @default(autoincrement())
+  nome                        String   @db.VarChar(100)
+  data_nascimento             DateTime
+  responsavel_nome            String   @db.VarChar(100)
+  responsavel_contato         String   @db.VarChar(100)
+  fonoaudiologo_responsavelId Int
+  data_criacao                DateTime @default(now())
+
+  Fonoaudiologo Fonoaudiologo @relation(fields: [fonoaudiologo_responsavelId], references: [id])
+  Avaliacoes    Avaliacao[]
+  Intervencoes  Intervencao[]
+}
+
+model Avaliacao {
+  id              Int      @id @default(autoincrement())
+  criancaId       Int
+  fonoaudiologoId Int
+  data_avaliacao  DateTime
+  descricao       String   @db.Text
+  resultado       String   @db.Text
+  data_criacao    DateTime @default(now())
+
+  Crianca       Crianca       @relation(fields: [criancaId], references: [id])
+  Fonoaudiologo Fonoaudiologo @relation(fields: [fonoaudiologoId], references: [id])
+}
+
+model Intervencao {
+  id                 Int      @id @default(autoincrement())
+  criancaId          Int
+  fonoaudiologoId    Int
+  data_intervencao   DateTime
+  descricao          String   @db.Text
+  resultados_obtidos String   @db.Text
+  data_criacao       DateTime @default(now())
+
+  Crianca       Crianca       @relation(fields: [criancaId], references: [id])
+  Fonoaudiologo Fonoaudiologo @relation(fields: [fonoaudiologoId], references: [id])
+}
